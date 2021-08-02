@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native'
 import  ajax from '../ajax'
 import DealDetail from './DealDetail';
 import DealList from './DealList';
@@ -10,22 +10,36 @@ export default class App extends Component {
     state = {
         deals : [],
         dealsFromSearch : [],
-        curDealId : null
+        curDealId : null,
+        activeSearchTerm : ''
     };
+
+    titleX = new Animated.Value(0);
 
     async componentDidMount()
     {
+        this.animateTitle();
         const deals = await ajax.fetchInitialDeals();
-        // console.log(deals)
         this.setState({deals});
     }
 
+    animateTitle = (direction = 1) => {
+        Animated.timing(
+            this.titleX,
+            {toValue : (Dimensions.get('window').width/3) * direction, duration : 1000, easing : Easing.ease})
+            .start(({finished}) => 
+            {   
+                if(finished)
+                this.animateTitle(-1 * direction)
+            })
+           
+    }
 
     searchDeals = async (searchTerm) => {
         let dealsFromSearch = []
         if(searchTerm)
             dealsFromSearch =  await ajax.fetchDealsSearch(searchTerm)
-        this.setState({dealsFromSearch})
+        this.setState({dealsFromSearch, activeSearchTerm : searchTerm})
     }
 
     setCurDeal = (dealID) => {
@@ -64,15 +78,15 @@ export default class App extends Component {
         {
             return (
                 <View style = {styles.main}>
-                    <Searchbar searchDeals = {this.searchDeals}/>
+                    <Searchbar searchDeals = {this.searchDeals} initialSearchTerm = {this.state.activeSearchTerm}/>
                     <DealList deals = {dealsToDisplay} onItemPress = {this.setCurDeal}/>
                 </View>
                 )
         }
         return (
-            <View style = {[styles.container, styles.main]}>
+            <Animated.View style = {[styles.container, styles.main, {left : this.titleX}]}>
                 <Text style = {styles.header}>BakeSale</Text>
-            </View>
+            </Animated.View>
         )
     }
 }
